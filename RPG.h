@@ -22,3 +22,4 @@ typedef struct{
 void SetColor(int color);
 void CursorView(char show);
 void gotoxy(int x, int y);
+int sellect(char* situ[]);

@@ -1,73 +1,215 @@
 #include "RPG.h"
-
+#include <time.h>
+#include <string.h>
 void mainPtr(void);
 
-int sellect(){
-    char* situ[3] = {"도로한가운데 있다.", "숲속에서 눈을떴다.","어디인지 모르는 건물 안에있다."};
-    
-    int POS = 0;
-	CursorView(0);
-	system("COLOR 0F");
+int sellect(char* situ[]){
+	int POS = 0;
+    CursorView(0);
+    system("COLOR 0F");
+
 	while (1) {
-		
-		switch (POS) {
-			case 0: 
-				SetColor(11);
-				gotoxy(20, 4); printf("%s\n",situ[0]);
-				SetColor(15); 
-				gotoxy(42, 4); printf("%s\n",situ[1]);
-				gotoxy(64, 4); printf("%s\n",situ[2]);
-                break;
-			case 1:
-				gotoxy(20, 4); printf("%s\n",situ[0]);
-				SetColor(11);
-				gotoxy(42, 4); printf("%s\n",situ[1]);
-				SetColor(15);
-				gotoxy(64, 4); printf("%s\n",situ[2]);
-				break;
-			case 2:
-				gotoxy(20, 4); printf("%s\n",situ[0]);
-				gotoxy(42, 4); printf("%s\n",situ[1]);
-				SetColor(11);
-				gotoxy(64, 4); printf("%s\n",situ[2]);
-				SetColor(15);
-                break;
-			default: break; 
-		}
-		Sleep(100);
+
+        	switch (POS) {
+            	case 0: 
+                	SetColor(11); gotoxy(10, 5); printf("> %s", situ[0]); // 선택된 항목은 앞에 '>' 기호를 붙여서 가시성 업!
+                	SetColor(15); gotoxy(10, 7); printf("  %s", situ[1]);
+                	gotoxy(10, 9); printf("  %s", situ[2]);
+                	break;
+            	case 1:
+                	SetColor(15); gotoxy(10, 5); printf("  %s", situ[0]);
+                	SetColor(11); gotoxy(10, 7); printf("> %s", situ[1]);
+                	SetColor(15); gotoxy(10, 9); printf("  %s", situ[2]);
+                	break;
+            	case 2:
+                	SetColor(15); gotoxy(10, 5); printf("  %s", situ[0]);
+                    gotoxy(10, 7); printf("  %s", situ[1]);
+                	SetColor(11); gotoxy(10, 9); printf("> %s", situ[2]);
+                	SetColor(15);
+                	break;
+            	default: break; 
+        	}
+        	Sleep(100);
         
-        if (GetAsyncKeyState(VK_LEFT))
-			if (POS == 0) POS = 2;
-			else POS -= 1;
-		else if (GetAsyncKeyState(VK_RIGHT))
-			if (POS == 2) POS = 0;
-			else POS += 1;
-		else if (GetAsyncKeyState(VK_RETURN))//엔터를 눌렀을 때
-			break;
-	}
-    return POS+1;
+        	if (GetAsyncKeyState(VK_LEFT) || GetAsyncKeyState(VK_UP)) {
+        	    if (POS == 0) POS = 2;
+        	    else POS -= 1;
+        	}
+        	else if (GetAsyncKeyState(VK_RIGHT) || GetAsyncKeyState(VK_DOWN)) {
+        	    if (POS == 2) POS = 0;
+        	    else POS += 1;
+        	}
+        	else if (GetAsyncKeyState(VK_RETURN)) { // 엔터를 눌렀을 때
+        	    break;
+        	}
+    }
+    
+    cls; 
+    return POS;
+
 }
+
+char* totalAction[15] = {
+    "주변을 살펴봐야겠다.",
+    "어떻게 할지 모르겠다, 무섭다.",
+    "우선 물건들을 모아야겠다.",
+    "사람이 있는지 큰소리로 찾아본다.",
+    "마실 수 있는 물이 있는지 찾는다.",
+    "소리를 죽이고 기어서 이동한다.",
+    "몸을 숨길 만한 은신처를 찾는다.",
+    "심호흡을 하며 마음을 진정시킨다.",
+    "더 높은 곳으로 올라가 지형을 본다.",
+    "쓸만한 임시 무기를 제작한다.",
+    "불을 피울 만한 재료를 구한다.",
+    "경계를 서며 주변 소리에 집중한다.",
+    "잠시 눈을 붙이고 체력을 회복한다.",
+    "무작정 뛰기 시작한다.",
+    "바닥에 떨어진 무언가를 먹는다."
+}; int totalCount = sizeof(totalAction) / sizeof(totalAction[0]);
+char* totalRes[15] = {
+	"주변에 아무도 없는거같다.",
+    "내가 할수있는게 없다",
+    "을 주웠다.",
+    "사람소리가 아닌게 들린다.",
+    "근처건물까지는 물을 못마실거같다",
+    "인기척이 느껴지지않아서 그냥 소리내며 움직인다.",
+    "근처건물이나 열린공간으로 가야할거같다.",
+    "아직상황이 이해되지않지만 마음을 가다듬는다.",
+    "높은건물이 보이니 그곳으로 가야할거같다",
+    "만들었지만 공격이 들어갈거같지않아 버렸다.",
+    "비가많이와서인지 재료가 다 눅눅하다, 버려야지.",
+    "동물소리도 안들리고 흔한 자동차소리도 안들린다.",
+    "무슨일이 생길지모르니 쉬는건 나중에하자.",
+    "근처에 인기척도 없고 건물만 있다.",
+    "쓰고 이상한맛이나서 뱉었다, 조심하자."
+};
+
+void stream(){
+	cls;
+		printf("나는 ...");
+		int pickedIndexes[3]; // 뽑힌 인덱스 저장할 배열
+
+    	for (int i = 0; i < 3; i++) {
+        	while (1) {
+            	int r = rand() % totalCount; // 0 ~ (전체개수-1) 사이에서 하나 뽑기
+            
+            	// 중복 검사
+            	int duplicate = 0;
+            	for (int j = 0; j < i; j++) {
+                	if (pickedIndexes[j] == r) {
+                    	duplicate = 1; // 이미 뽑은 거면 다시!
+                    	break;
+                	}
+            	}
+            	if (!duplicate) {
+                	pickedIndexes[i] = r; // 중복 아니면 확정
+                	break;
+            	}
+        	}
+    	}
+
+	char* nowAction[3];
+    nowAction[0] = totalAction[pickedIndexes[0]];
+    nowAction[1] = totalAction[pickedIndexes[1]];
+    nowAction[2] = totalAction[pickedIndexes[2]];
+    int choice = sellect(nowAction); 
+    int mypick = pickedIndexes[choice];
+
+    cls;
+    printf("\n나는  %s \n", totalAction[mypick]);
+    printf("결국 %s \n\n", totalRes[mypick]);
+    
+	static int turnCount = 0;
+    static int bonusChance = 0;
+    
+    turnCount++;
+    // 기본 확률은 20%로 시작하지만, 흐른 시간(turnCount)과 수색 실패 보너스가 계속 더해짐
+    int finalChance = 20 + (turnCount * 2) + bonusChance; 
+    
+    // 확률이 100%를 넘지 않도록 안전장치 설정
+    if (finalChance > 90) finalChance = 60; 
+
+    int monsterChance = rand() % 100; // 0 ~ 99 무작위 수 생성
+    
+    // 디버그용으로 현재 인게임 위험도를 살짝 표시해주면 플레이어가 더 스릴을 느낍니다.
+    printf("⏳ 생존 시간: %d턴 | ⚠️주변 위험도: %d%%\n\n", turnCount, finalChance);
+    Sleep(500);
+
+    if (monsterChance < finalChance) { // 가변 확률 적용!
+        SetColor(12); // 빨간색 위험 신호
+        printf("[위험] 부스럭거리는 소리와 함께 무언가 나타났다!\n");
+        printf("좆됐다! 모를 괴생명체가 앞을 가로막았다!\n");
+        SetColor(15);
+		Sleep(500);
+        pause;
+		cls;
+        // 몬스터를 마주쳤으므로 쌓여있던 추가 확률 보너스는 초기화
+        bonusChance = 0;
+
+        // 전투 선택지 호출 (만들어둔 sellect 활용)
+        char* battleAction[3] = {"싸운다!", "방어 태세를 취한다.", "최대한 멀리 도망친다!"};
+        int battleChoice = sellect(battleAction);
+
+        cls;
+        if (battleChoice == 0) {
+            SetColor(13);
+            printf("\n격렬하게 싸워 승리했다! (체력 -10, 스트레스 +5)\n\n");
+        } 
+        else if (battleChoice == 1) {
+			SetColor(13);
+            printf("\n공격을 잘 막아내어 위기를 넘겼다. 몬스터가 숲으로 사라진다.(체력 -30, 스트레스 +15)\n\n");
+        } 
+        else if (battleChoice == 2) {
+            SetColor(13);
+            printf("\n뒤도 안 돌아보고 째낀다! 다행히 따돌린 것 같다. (스트레스 +15)\n\n");
+        }
+        SetColor(15);
+    } else {
+        // 몬스터를 안 만났다면 다음 번엔 더 잘 만나도록 보너스 확률을 8%씩 누적 적립!
+        bonusChance += 5;
+        printf("아무것도 없지만 불안한기분이든다.\n\n");
+    }
+
+    pause;
+
+	stream();
+}
+
+
 
 void newGame(){
     cls;
     system("mode con: cols=106 lines=15");
-    printf("=============================================\n");
-    printf("눈을 떴다! 나는........\n");
+    printf("========================================================================================================\n\n\n");
+    gotoxy(39,3); printf("눈을 떴다! 나는........");
     Sleep(1000);
-    player newPlayer;
-    int choice = sellect();
-    if(choice == 1) { newPlayer.maxhp = 180.0; newPlayer.stress = 15; strcpy(newPlayer.status, "도시사람");}
-    if(choice == 2) {newPlayer.maxhp = 240.0; newPlayer.stress = 25; strcpy(newPlayer.status, "자연인");}
-    if(choice == 3) {newPlayer.maxhp = 200.0; newPlayer.stress = 30; strcpy(newPlayer.status, "실내?");}
-
+    static player newPlayer;
+	char* stsitu[3] = {"도로한가운데 있다.", "숲속에서 눈을떴다.","어디인지 모르는 건물 안에있다."};
+    int choice = sellect(stsitu);
+    if(choice == 0) { newPlayer.maxhp = 180.0; newPlayer.stress = 15; strcpy(newPlayer.status, "도시사람");}
+    if(choice == 1) {newPlayer.maxhp = 240.0; newPlayer.stress = 25; strcpy(newPlayer.status, "자연인");}
+    if(choice == 2) {newPlayer.maxhp = 200.0; newPlayer.stress = 30; strcpy(newPlayer.status, "실내?");}
     cls;
-    printf("\n  모험이 시작되었습니다! 당신의 선택 결과:\n");
-    printf("  -----------------------------------------------\n");
-    printf("  [초기 상태] : %s\n", newPlayer.status);
-    printf("  [최대 체력] : %.1f\n", newPlayer.maxhp);
-    printf("  [스 트 레 스] : %d\n", newPlayer.stress);
-    printf("  -----------------------------------------------\n\n");
+
+	puts("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+	puts("■                                                                                                      ■");
+	puts("■                                                                                                      ■");
+	puts("■                                                                                                      ■");
+	puts("■                                                                                                      ■");
+	puts("■                                                                                                      ■");
+	puts("■                                                                                                      ■");
+	puts("■                                                                                                      ■");
+	printf("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+
+	gotoxy(40,2); printf("당신의 선택 결과:\n");
+	gotoxy(20, 5); printf("  [초기 상태] : %s\n", newPlayer.status);
+	gotoxy(40, 5); printf("  [최대 체력] : %.1f\n", newPlayer.maxhp);
+    gotoxy(60,5);  printf("  [스 트 레 스] : %d\n", newPlayer.stress);
+
+	gotoxy(35,10); printf("아무키나 누르고 모험시작!");
     pause;
+
+	stream();
 }
 
 void mainPtr(void) {
