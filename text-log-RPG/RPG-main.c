@@ -123,7 +123,12 @@ char* totalRes[15] = {
     "근처에 인기척도 없고 건물만 있다.",
     "쓰고 이상한맛이나서 뱉었다, 조심하자."
 };
+/*
+char* items[100] = {
+	"나뭇가지","나뭇잎",""
+}
 
+*/
 void stream(void){
 	cls;
 		printf("나는 ...");
@@ -176,7 +181,7 @@ void stream(void){
 	int possible;
     
     // 디버그용으로 현재 인게임 위험도를 살짝 표시해주면 플레이어가 더 스릴을 느낍니다.
-    printf("⏳ 생존 시간: %d턴 | ⚠️주변 위험도: %d%%\n\n", turnCount, finalChance);
+    printf("⏳ 생존 시간: %d턴 | ⚠️ 주변 위험도: %d%%\n\n", turnCount, finalChance);
     Sleep(500);
 
     if (monsterChance < finalChance) { // 가변 확률 적용!
