@@ -14,6 +14,7 @@
 /* 플레이어 체력  */
 typedef struct{
     double maxhp;
+    double nowhp;
     char status[100];
     int stress;
 }player;
