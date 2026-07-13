@@ -4,12 +4,20 @@
 void mainPtr(void);
 void stream(void);
 void restopt(void);
+void meetmon(void);
 player newPlayer;
+
+int turnCount;
+int bonusChance;
+int finalChance;
+int monsterChance;
+
+
 
 void restopt(void){
 	cls;
 	char* saveitemheal[4] = {"저장하기", "인벤토리", "건강상태", "선택지로 돌아간다."};
-	int  choice = sellect(saveitemheal);
+	int  choice = sellect(saveitemheal,get_size(saveitemheal));
 	if (choice == 0) {
         SetColor(11);
         printf("\n지금까지의 모험들을 저장합니다.(아직)\n\n");
@@ -34,59 +42,41 @@ void restopt(void){
 	stream();
 }
 
-int sellect(char* situ[]){
-	int POS = 0;
+int sellect(char* situ[],int size){
+int POS = 0;
     CursorView(0);
     system("COLOR 0F");
 
-	while (1) {
+    while (1) {
+        // 선택지 출력 (size만큼 루프)
+        for (int i = 0; i < size; i++) {
+            gotoxy(10, 5 + (i * 2)); // 2칸 간격으로 배치
+            if (i == POS) {
+                SetColor(11);
+                printf("> %s", situ[i]);
+            } else {
+                SetColor(15);
+                printf("  %s", situ[i]);
+            }
+        }
 
-        	switch (POS) {
-            	case 0: 
-                	SetColor(11); gotoxy(10, 5); printf("> %s", situ[0]); // 선택된 항목은 앞에 '>' 기호를 붙여서 가시성 업!
-                	SetColor(15); gotoxy(10, 7); printf("  %s", situ[1]);
-                	gotoxy(10, 9); printf("  %s", situ[2]);
-					SetColor(15); gotoxy(10, 11); printf("  %s", situ[3]);
-                	break;
-            	case 1:
-                	SetColor(15); gotoxy(10, 5); printf("  %s", situ[0]);
-                	SetColor(11); gotoxy(10, 7); printf("> %s", situ[1]);
-                	SetColor(15); gotoxy(10, 9); printf("  %s", situ[2]);
-					SetColor(15); gotoxy(10, 11); printf("  %s", situ[3]);
-                	break;
-            	case 2:
-                	SetColor(15); gotoxy(10, 5); printf("  %s", situ[0]);
-                    gotoxy(10, 7); printf("  %s", situ[1]);
-                	SetColor(11); gotoxy(10, 9); printf("> %s", situ[2]);
-					SetColor(15); gotoxy(10, 11); printf("  %s", situ[3]);
-                	break;
-				case 3:
-					SetColor(15); gotoxy(10, 5); printf("  %s", situ[0]);
-                    gotoxy(10, 7); printf("  %s", situ[1]);
-                	SetColor(15); gotoxy(10, 9); printf("  %s", situ[2]);
-					SetColor(11); gotoxy(10, 11); printf("> %s", situ[3]);
-                	SetColor(15);
-                	break;
-            	default: break; 
-        	}
-        	Sleep(100);
-        
-        	if (GetAsyncKeyState(VK_LEFT) || GetAsyncKeyState(VK_UP)) {
-        	    if (POS == 0) POS = 3;
-        	    else POS -= 1;
-        	}
-        	else if (GetAsyncKeyState(VK_RIGHT) || GetAsyncKeyState(VK_DOWN)) {
-        	    if (POS == 3) POS = 0;
-        	    else POS += 1;
-        	}
-        	else if (GetAsyncKeyState(VK_RETURN)) { // 엔터를 눌렀을 때
-        	    break;
-        	}
+        Sleep(100);
+
+        if (GetAsyncKeyState(VK_UP)) {
+            if (POS == 0) POS = size - 1;
+            else POS -= 1;
+        }
+        else if (GetAsyncKeyState(VK_DOWN)) {
+            if (POS == size - 1) POS = 0;
+            else POS += 1;
+        }
+        else if (GetAsyncKeyState(VK_RETURN)) {
+            break;
+        }
     }
     
-    cls; 
+    cls; // 선택 후 화면 초기화
     return POS;
-
 }
 
 char* totalAction[15] = {
@@ -124,11 +114,78 @@ char* totalRes[15] = {
     "쓰고 이상한맛이나서 뱉었다, 조심하자."
 };
 /*
-char* items[100] = {
-	"나뭇가지","나뭇잎",""
+char* items[25] = {
+	"나뭇가지","나뭇잎","동전","사과","음식물","괴물의 살점","괴물의 피","벌레","개미",
+	"짱돌","커터칼","식칼","오렌지","귤","삼각김밥","바나나우유","초코에몽","에너지드링크",
+	"반쯤먹은 생수","술","반창고","자전거 헬멧","배달조끼","곰팡이 핀 치킨","상한 음식물"
 }
-
+char* effects[6]={"배탈","출혈","만취","배부름","허기","구토"};
 */
+void meetmon(void){
+	SetColor(12); // 빨간색 위험 신호
+    printf("[위험] 부스럭거리는 소리와 함께 무언가 나타났다!\n");
+    printf("좆됐다! 모를 괴생명체가 앞을 가로막았다!\n");
+    SetColor(15);
+	Sleep(500);
+    pause;
+	cls;
+	bonusChance = 0;
+	SetColor(13);
+    char* battleAction[4] = {"싸운다!", "방어 태세를 취한다.", "최대한 멀리 도망친다!", "심호흡하고 약점을 찾는다."};
+    int battleChoice = sellect(battleAction,get_size(battleAction));
+	int possible =  monsterChance + finalChance;
+    cls;
+    if (battleChoice == 0) {
+        SetColor(13);
+		if(possible > 75) {
+			possible = 0;
+			printf("씨발! 오히려 더맞았다. 아프다.(체력 -35.6, 스트레스 +15, 타박상/약한 출혈)");
+			newPlayer.nowhp -= 35.6; newPlayer.stress += 15; strcpy(newPlayer.status, "타박상,약한 출혈");
+			pause;
+		}
+		else {
+			possible = 0;
+			printf("\n격렬하게 싸워 승리했다! (체력 -10, 스트레스 +5)\n\n");
+			newPlayer.nowhp -=10; newPlayer.stress +=5;
+			pause;
+		}
+	}
+
+    else if (battleChoice == 1) {
+		SetColor(13);
+		if(possible > 80) {
+			possible = 0;
+			printf("못막았다. 존나아프다 ...(체력 -52.3,스트레스 +20, 출혈)");
+			newPlayer.nowhp -= 52.3; newPlayer.stress += 20; strcpy(newPlayer.status, "출혈");
+			pause;
+		}
+        else {
+			possible =0;
+			printf("\n공격을 잘 막아내어 위기를 넘겼다. 몬스터가 숲으로 사라진다.(체력 -30, 스트레스 +15)\n\n");
+			newPlayer.nowhp -=30; newPlayer.stress +=15;
+			pause;
+		}	
+	}
+
+    else if (battleChoice == 2) {
+        SetColor(13);
+        printf("\n뒤도 안 돌아보고 째낀다! 다행히 따돌린 것 같다. (스트레스 +15)\n\n");
+		newPlayer.stress +=15;
+		pause;
+    }
+
+	else if(battleChoice == 3){
+		SetColor(13);
+		printf("\n천천히 약점을 찾았다. 때리고 튀자. (체력 + 5)\n\n");
+		newPlayer.nowhp += 5;
+		pause;
+	}
+
+    SetColor(15);
+	printf("\n전투종료. 몬스터가 다 도망간거같다 다시 움직이자\n\n");
+	pause;
+	stream();
+}
 void stream(void){
 	cls;
 		printf("나는 ...");
@@ -158,7 +215,7 @@ void stream(void){
     nowAction[1] = totalAction[pickedIndexes[1]];
     nowAction[2] = totalAction[pickedIndexes[2]];
 	nowAction[3] = "기타(저장, 인벤토리, 건강)";
-    int choice = sellect(nowAction);
+    int choice = sellect(nowAction,get_size(nowAction));
     int mypick = pickedIndexes[choice];
 
 	if(choice == 3) restopt();
@@ -167,81 +224,27 @@ void stream(void){
     printf("\n나는  %s \n", totalAction[mypick]);
     printf("결국 %s \n\n", totalRes[mypick]);
     
-	static int turnCount = 0;
-    static int bonusChance = 0;
+	finalChance =0 ;
 
     turnCount++;
     // 기본 확률은 20%로 시작하지만, 흐른 시간(turnCount)과 수색 실패 보너스가 계속 더해짐
-    int finalChance = 20 + (turnCount * 2) + bonusChance; 
+    finalChance = 20+ bonusChance * ((rand()%5)+1); 
     
     // 확률이 100%를 넘지 않도록 안전장치 설정
     if (finalChance > 90) finalChance = 60; 
-
-    int monsterChance = rand() % 100; // 0 ~ 99 무작위 수 생성
-	int possible;
+	monsterChance = rand() % 100; // 0 ~ 99 무작위 수 생성
     
     // 디버그용으로 현재 인게임 위험도를 살짝 표시해주면 플레이어가 더 스릴을 느낍니다.
     printf("⏳ 생존 시간: %d턴 | ⚠️ 주변 위험도: %d%%\n\n", turnCount, finalChance);
     Sleep(500);
 
-    if (monsterChance < finalChance) { // 가변 확률 적용!
-        SetColor(12); // 빨간색 위험 신호
-        printf("[위험] 부스럭거리는 소리와 함께 무언가 나타났다!\n");
-        printf("좆됐다! 모를 괴생명체가 앞을 가로막았다!\n");
-        SetColor(15);
-		Sleep(500);
-        pause;
-		cls;
-        // 몬스터를 마주쳤으므로 쌓여있던 추가 확률 보너스는 초기화
-        bonusChance = 0;
-
-        // 전투 선택지 호출 (만들어둔 sellect 활용)
-        char* battleAction[4] = {"싸운다!", "방어 태세를 취한다.", "최대한 멀리 도망친다!", "심호흡하고 약점을 찾는다."};
-        int battleChoice = sellect(battleAction);
-
-        cls;
-        if (battleChoice == 0) {
-            SetColor(13);
-			possible =  monsterChance + finalChance;
-			if(possible > 75) {
-				possible = 0;
-				printf("씨발! 오히려 더맞았다. 아프다.(체력 -35.6, 스트레스 +15, 타박상/약한 출혈)");
-				newPlayer.nowhp -= 35.6; newPlayer.stress += 15; strcpy(newPlayer.status, "타박상,약한 출혈");
-			}
-			else {
-				printf("\n격렬하게 싸워 승리했다! (체력 -10, 스트레스 +5)\n\n");
-				newPlayer.nowhp -=10; newPlayer.stress +=5;
-			}
-        } 
-        else if (battleChoice == 1) {
-			SetColor(13);
-			possible =  monsterChance + finalChance;
-			if(possible > 80) {
-				possible = 0;
-				printf("못막았다. 존나아프다 ...(체력 -52.3,스트레스 +20, 출혈)");
-				newPlayer.nowhp -= 52.3; newPlayer.stress += 20; strcpy(newPlayer.status, "출혈");
-			}
-            else {
-				printf("\n공격을 잘 막아내어 위기를 넘겼다. 몬스터가 숲으로 사라진다.(체력 -30, 스트레스 +15)\n\n");
-				newPlayer.nowhp -=30; newPlayer.stress +=15;
-			}	
-		} 
-        else if (battleChoice == 2) {
-            SetColor(13);
-            printf("\n뒤도 안 돌아보고 째낀다! 다행히 따돌린 것 같다. (스트레스 +15)\n\n");
-			newPlayer.stress +=15;
-        }
-		else if(battleChoice == 3){
-			SetColor(13);
-			printf("\n천천히 약점을 찾았다. 때리고 튀자. (체력 + 5)\n\n");
-			newPlayer.nowhp += 5;
-		}
-        SetColor(15);
-    	} else {
+    if (monsterChance < finalChance) 
+		meetmon(); // 가변 확률 적용!
+	else {
         // 몬스터를 안 만났다면 다음 번엔 더 잘 만나도록 보너스 확률을 8%씩 누적 적립!
-        bonusChance += 5;
-        printf("아무것도 없지만 불안한기분이든다.\n\n");
-    	}
+    bonusChance += 5;
+    printf("아무것도 없지만 불안한기분이든다.\n\n");
+    }
 
     pause;
 
@@ -258,7 +261,7 @@ void newGame(){
     Sleep(1000);
  
 	char* stsitu[4] = {"도로한가운데 있다.", "숲속에서 눈을떴다.","어디인지 모르는 건물 안에있다.", "대피소에 있다."};
-    int choice = sellect(stsitu);
+    int choice = sellect(stsitu,get_size(stsitu));
     if(choice == 0) { newPlayer.maxhp = 180.0; newPlayer.nowhp = 180.0; newPlayer.stress = 15; strcpy(newPlayer.status, "도시사람");}
     if(choice == 1) {newPlayer.maxhp = 240.0; newPlayer.nowhp = 240.0; newPlayer.stress = 25; strcpy(newPlayer.status, "자연인");}
     if(choice == 2) {newPlayer.maxhp = 200.0; newPlayer.nowhp = 200.0; newPlayer.stress = 30; strcpy(newPlayer.status, "실내?");}
@@ -279,6 +282,8 @@ void newGame(){
 	gotoxy(20, 5); printf("  [초기 상태] : %s\n", newPlayer.status);
 	gotoxy(40, 5); printf("  [최대 체력] : %.1f\n", newPlayer.maxhp);
     gotoxy(60,5);  printf("  [스 트 레 스] : %d\n", newPlayer.stress);
+	turnCount = 0;
+    bonusChance = 0;
 
 	gotoxy(35,10); printf("아무키나 누르고 모험시작!");
     pause;

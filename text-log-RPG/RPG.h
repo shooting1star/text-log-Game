@@ -10,6 +10,7 @@
 /* ▼▼▼▼▼ define 선언 ▼▼▼▼▼ */
 #define pause system("pause > nul")
 #define cls system("cls")
+#define get_size(arr) (sizeof(arr)/sizeof((arr)[0]))
 
 /* 플레이어 체력  */
 typedef struct{
@@ -17,11 +18,11 @@ typedef struct{
     double nowhp;
     char status[100];
     int stress;
-    char* items[100];
+    char* bag[100];
 }player;
 
 /* ▼▼▼▼▼ 함수 선언 ▼▼▼▼▼ */
 void SetColor(int color);
 void CursorView(char show);
 void gotoxy(int x, int y);
-int sellect(char* situ[]);
+int sellect(char* situ[],int size);
