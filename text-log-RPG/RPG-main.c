@@ -1,6 +1,9 @@
 #include "RPG.h"
 #include <time.h>
 #include <string.h>
+#include <stdlib.h>
+#define BAG_SIZE 25
+
 void mainPtr(void);
 void stream(void);
 void restopt(void);
@@ -11,22 +14,208 @@ int turnCount;
 int bonusChance;
 int finalChance;
 int monsterChance;
+int bag_pos=0;
 
+char* items[25] = {
+	"나뭇가지","나뭇잎","동전","사과","음식물","괴물의 살점","괴물의 피","벌레","개미",
+	"짱돌","커터칼","식칼","오렌지","귤","삼각김밥","바나나우유","초코에몽","에너지드링크",
+	"반쯤먹은 생수","술","반창고","자전거 헬멧","배달조끼","곰팡이 핀 치킨","상한 음식물"
+};
+char* effects[5]={"출혈","만취","배부름","허기","구토"};
 
+void SaveGame(const char* filename) {
+    FILE* fp = fopen(filename, "w");
+    if (fp == NULL) {
+        printf("저장 파일 생성 실패!\n");
+        return;
+    }
+
+    // 아이템을 쉼표(,)로 하나의 문자열로 묶기
+    char inven[1024] = "";
+    for (int i = 0; i < BAG_SIZE; i++) {
+        if (newPlayer.bag[i] != NULL) {
+            strcat(inven, newPlayer.bag[i]);
+            strcat(inven, ",");
+        }
+    }
+    
+    // 가방이 비어있으면 EMPTY 기록, 아니면 마지막 쉼표 제거
+    int len = strlen(inven);
+    if (len > 0) inven[len - 1] = '\0';
+    else strcpy(inven, "EMPTY");
+
+    // 상태(status)에 띄어쓰기가 포함될 수 있으므로 구분자를 공백 대신 '|'로 사용
+    fprintf(fp, "%.1f|%.1f|%d|%s|%d|%d|%s\n", 
+        newPlayer.nowhp, newPlayer.maxhp, newPlayer.stress, 
+        newPlayer.status, turnCount, bonusChance, inven);
+
+    fclose(fp);
+    printf("현재 상태가 안전하게 저장되었습니다. (%s)\n", filename);
+}
+int LoadGame(const char* filename) {
+    FILE* fp = fopen(filename, "r");
+    if (fp == NULL) return 0; // 파일이 없으면 0 반환
+
+    char buffer[2048];
+    if (fgets(buffer, sizeof(buffer), fp) == NULL) {
+        fclose(fp);
+        return 0;
+    }
+    fclose(fp);
+
+    // 줄바꿈 문자 제거
+    buffer[strcspn(buffer, "\n")] = 0;
+
+    // '|' 기준으로 문자열을 잘라서 구조체에 덮어씌우기
+    char* token = strtok(buffer, "|");
+    if (token == NULL) return 0;
+    newPlayer.nowhp = atof(token);
+
+    token = strtok(NULL, "|");
+    if (token == NULL) return 0;
+    newPlayer.maxhp = atof(token);
+
+    token = strtok(NULL, "|");
+    if (token == NULL) return 0;
+    newPlayer.stress = atoi(token);
+
+    token = strtok(NULL, "|");
+    if (token == NULL) return 0;
+    strcpy(newPlayer.status, token);
+
+    token = strtok(NULL, "|");
+    if (token == NULL) return 0;
+    turnCount = atoi(token);
+
+    token = strtok(NULL, "|");
+    if (token == NULL) return 0;
+    bonusChance = atoi(token);
+
+    token = strtok(NULL, "|"); // 아이템 목록 텍스트
+    
+    // 가방 초기화
+    for(int i = 0; i < BAG_SIZE; i++) newPlayer.bag[i] = NULL;
+    bag_pos = 0;
+
+    if (token != NULL && strcmp(token, "EMPTY") != 0) {
+        char* item_token = strtok(token, ",");
+        while (item_token != NULL && bag_pos < BAG_SIZE) {
+            // items 배열에서 일치하는 원본 문자열 주소를 찾아 가방에 넣음
+            for (int i = 0; i < 25; i++) {
+                if (strcmp(item_token, items[i]) == 0) {
+                    newPlayer.bag[bag_pos++] = items[i];
+                    break;
+                }
+            }
+            item_token = strtok(NULL, ",");
+        }
+    }
+    return 1; // 로드 성공
+}
+
+void sort_bag() {
+    for (int i = 0; i < BAG_SIZE - 1; i++) {
+        if (newPlayer.bag[i] == NULL) {
+            for (int j = i + 1; j < BAG_SIZE; j++) {
+                if (newPlayer.bag[j] != NULL) {
+                    newPlayer.bag[i] = newPlayer.bag[j];
+                    newPlayer.bag[j] = NULL;
+                    break;
+                }
+            }
+        }
+    }
+}
+int check_food(int pos){
+	char* isfood[] = {
+		"사과", "오렌지", "귤","삼각김밥","바나나우유","초코에몽","에너지드링크","반쯤먹은 생수","술"
+	};
+    int list_size = sizeof(isfood) / sizeof(isfood[0]);
+
+    for (int i = 0; i < list_size; i++) {
+        if (strcmp(newPlayer.bag[pos], isfood[i]) == 0) {
+            return 1; // 일치하는 음식을 찾음 (참)
+        }
+    }
+    return 0; // 음식을 찾지 못함 (거짓)
+}
+void useornot(int bag_pos){
+if (newPlayer.bag[bag_pos] == NULL) {
+        printf("가방의 해당 슬롯이 비어있습니다.\n");
+        pause;
+        return;
+    }
+
+    char* opt[3] = {"사용한다", "그만둔다", "버린다"};
+    int choice = sellect(opt, get_size(opt)); 
+
+    if (choice == 0) { // 1. 사용한다
+        if (check_food(bag_pos) == 1) { 
+            printf("%s을/를 먹으니까 기분이 좋아졌다! (체력 +25 , 스트레스 -10)\n", newPlayer.bag[bag_pos]); 
+            newPlayer.nowhp += 25; newPlayer.stress -= 10;
+            newPlayer.bag[bag_pos] = NULL; // 사용 완료 후 삭제
+            sort_bag();
+			pause;
+        } 
+        else {
+            printf("사용해봤자 쓸데가 없어보인다.\n"); // 기획 의도에 맞는 자연스러운 거절 대사
+            pause;
+        }
+    }
+    else if (choice == 1) { 
+        printf("쓸려다가 그만 뒀다.\n"); 
+        pause;
+    }
+    else {
+        printf("%s을/를 버렸다.\n", newPlayer.bag[bag_pos]); 
+        newPlayer.bag[bag_pos] = NULL;
+		sort_bag();
+        pause; 
+    }
+    return;
+}
 
 void restopt(void){
 	cls;
 	char* saveitemheal[4] = {"저장하기", "인벤토리", "건강상태", "선택지로 돌아간다."};
 	int  choice = sellect(saveitemheal,get_size(saveitemheal));
 	if (choice == 0) {
-        SetColor(11);
-        printf("\n지금까지의 모험들을 저장합니다.(아직)\n\n");
+		SetColor(11);
+        printf("\n지금까지의 모험들을 저장합니다.\n");
+        SaveGame("log.data"); // 추가된 저장 함수 호출!
 		pause;
     } 
     else if (choice == 1) {
 		SetColor(11);
-        printf("\n아직\n\n");
-		pause;
+        
+        // 1. 실제 아이템들만 담을 임시 배열과 개수 카운터 생성
+        char* active_bag[BAG_SIZE]; 
+        int active_count = 0;
+        
+        // 2. 가방을 돌면서 실제 아이템(NULL이 아닌 것)만 임시 배열에 채워 넣기
+        for (int i = 0; i < BAG_SIZE; i++) {
+            if (newPlayer.bag[i] != NULL) {
+                active_bag[active_count] = newPlayer.bag[i];
+                active_count++;
+            }
+        }
+        
+        // 3. 예외 처리: 만약 가방이 텅 비어 있다면 메시지 출력 후 탈출
+        if (active_count == 0) {
+            printf("\n가방이 텅 비어 있습니다!\n\n");
+            pause;
+        } 
+        else {
+            printf("내가 가진 아이템들은 ..\n");
+            
+            // 4. 실제 존재하는 아이템 개수(active_count)만큼만 선택지 창에 넘겨줌!
+            int selected_idx = sellect(active_bag, active_count);
+            
+            // 5. useornot() 함수에 '실제 가방 배열'의 인덱스를 전달해야 하므로
+            // 우리가 이전에 sort_bag()을 해서 앞에서부터 채워놨기 때문에 
+            // selected_idx가 곧 newPlayer.bag의 실제 인덱스(bag_pos)와 완벽히 일치합니다!
+            useornot(selected_idx);
+        }
     } 
     else if (choice == 2) {
         SetColor(11);
@@ -39,41 +228,40 @@ void restopt(void){
 		pause;
 	}
     SetColor(15);
-	stream();
 }
 
 int sellect(char* situ[],int size){
-int POS = 0;
-    CursorView(0);
-    system("COLOR 0F");
+	int POS = 0;
+    	CursorView(0);
+    	system("COLOR 0F");
 
-    while (1) {
-        // 선택지 출력 (size만큼 루프)
-        for (int i = 0; i < size; i++) {
-            gotoxy(10, 5 + (i * 2)); // 2칸 간격으로 배치
-            if (i == POS) {
-                SetColor(11);
-                printf("> %s", situ[i]);
-            } else {
-                SetColor(15);
-                printf("  %s", situ[i]);
-            }
-        }
+	    while (1) {
+	        // 선택지 출력 (size만큼 루프)
+	        for (int i = 0; i < size; i++) {
+	            gotoxy(10, 5 + (i * 2)); // 2칸 간격으로 배치
+	            if (i == POS) {
+	                SetColor(11);
+	                printf("> %s", situ[i]);
+	            } else {
+	                SetColor(15);
+	                printf("  %s", situ[i]);
+	            }
+	        }
 
-        Sleep(100);
+	        Sleep(100);
 
-        if (GetAsyncKeyState(VK_UP)) {
-            if (POS == 0) POS = size - 1;
-            else POS -= 1;
-        }
-        else if (GetAsyncKeyState(VK_DOWN)) {
-            if (POS == size - 1) POS = 0;
-            else POS += 1;
-        }
-        else if (GetAsyncKeyState(VK_RETURN)) {
-            break;
-        }
-    }
+	        if (GetAsyncKeyState(VK_UP)) {
+	            if (POS == 0) POS = size - 1;
+    	        else POS -= 1;
+    	    }
+        	else if (GetAsyncKeyState(VK_DOWN)) {
+        	    if (POS == size - 1) POS = 0;
+            	else POS += 1;
+        	}
+        	else if (GetAsyncKeyState(VK_RETURN)) {
+            	break;
+        	}
+    	}
     
     cls; // 선택 후 화면 초기화
     return POS;
@@ -113,14 +301,6 @@ char* totalRes[15] = {
     "근처에 인기척도 없고 건물만 있다.",
     "쓰고 이상한맛이나서 뱉었다, 조심하자."
 };
-/*
-char* items[25] = {
-	"나뭇가지","나뭇잎","동전","사과","음식물","괴물의 살점","괴물의 피","벌레","개미",
-	"짱돌","커터칼","식칼","오렌지","귤","삼각김밥","바나나우유","초코에몽","에너지드링크",
-	"반쯤먹은 생수","술","반창고","자전거 헬멧","배달조끼","곰팡이 핀 치킨","상한 음식물"
-}
-char* effects[6]={"배탈","출혈","만취","배부름","허기","구토"};
-*/
 void meetmon(void){
 	SetColor(12); // 빨간색 위험 신호
     printf("[위험] 부스럭거리는 소리와 함께 무언가 나타났다!\n");
@@ -130,6 +310,7 @@ void meetmon(void){
     pause;
 	cls;
 	bonusChance = 0;
+	int pick_item = rand()%25;
 	SetColor(13);
     char* battleAction[4] = {"싸운다!", "방어 태세를 취한다.", "최대한 멀리 도망친다!", "심호흡하고 약점을 찾는다."};
     int battleChoice = sellect(battleAction,get_size(battleAction));
@@ -147,6 +328,19 @@ void meetmon(void){
 			possible = 0;
 			printf("\n격렬하게 싸워 승리했다! (체력 -10, 스트레스 +5)\n\n");
 			newPlayer.nowhp -=10; newPlayer.stress +=5;
+			if(bag_pos > 24 ) {printf("아이템이 다차서 못주워가겠다 ㄲㅂ");}
+			else {
+				int inserted = 0;
+				for(int i = 0; i < BAG_SIZE; i++) {
+    				if(newPlayer.bag[i] == NULL) {
+        				newPlayer.bag[i] = items[pick_item];
+        				printf("아이템 : %s을/를 주웠다!", items[pick_item]);
+        				inserted = 1;
+        				break;
+    				}
+				}
+				if(!inserted) {printf("아이템이 다차서 못주워가겠다 ㄲㅂ\n");}
+			}
 			pause;
 		}
 	}
@@ -184,9 +378,10 @@ void meetmon(void){
     SetColor(15);
 	printf("\n전투종료. 몬스터가 다 도망간거같다 다시 움직이자\n\n");
 	pause;
-	stream();
 }
 void stream(void){
+	if(newPlayer.stress >= 89) {printf("스트레스 존나받는다....... 힘이빠진다 ( 체력 -2.5)"); newPlayer.nowhp -=2.5;  newPlayer.stress -= 1.9; pause;}
+	if(newPlayer.nowhp <= 0) {printf("몸이 너무 힘들다.. 눈이 감긴다. "); SetColor(13); gotoxy(20 ,6); puts("사망하였습니다, 게임을 종료합니다.(저장 X)"); pause; exit(0);}
 	cls;
 		printf("나는 ...");
 		int pickedIndexes[4]; // 뽑힌 인덱스 저장할 배열
@@ -247,11 +442,7 @@ void stream(void){
     }
 
     pause;
-
-	stream();
 }
-
-
 
 void newGame(){
     cls;
@@ -284,13 +475,12 @@ void newGame(){
     gotoxy(60,5);  printf("  [스 트 레 스] : %d\n", newPlayer.stress);
 	turnCount = 0;
     bonusChance = 0;
-
+	bag_pos = 0;
 	gotoxy(35,10); printf("아무키나 누르고 모험시작!");
     pause;
 
-	stream();
+	while(1) { stream();}
 }
-
 void mainPtr(void) {
 	system("mode con: cols=106 lines=9");   //참고로 cols 2단위가 특수문자 또는 한글 1글자다.
     SetConsoleTitleW(L"RPG");
@@ -308,7 +498,6 @@ void mainPtr(void) {
 	gotoxy(64, 4); printf("<게임  종료>");
 	return;
 }
-
 int main(void) {
 
     system("chcp 65001 > nul");
@@ -354,7 +543,19 @@ int main(void) {
 	}
 	cls;
 	if (POS == 0) newGame();
-	else if (POS == 1) puts("이어 하기를 눌렀습니다.");
+	else if (POS == 1) {
+		if (LoadGame("log.data")) { // 게임 내부에서 이어하기를 눌렀을 때
+            system("mode con: cols=106 lines=15");
+			SetColor(11);
+            printf("\n[log.data] 성공적으로 불러왔습니다!\n");
+            pause;
+            while(1) { stream(); }
+        } else {
+            printf("\n저장된 파일(log.data)이 없습니다. 새로 시작합니다.\n");
+            pause;
+            newGame();
+        }
+	}
 	else if (POS == 2) puts("게임을 종료합니다 .");
 
 	return 0;

@@ -18,7 +18,7 @@ typedef struct{
     double nowhp;
     char status[100];
     int stress;
-    char* bag[100];
+    char* bag[25];
 }player;
 
 /* ▼▼▼▼▼ 함수 선언 ▼▼▼▼▼ */
